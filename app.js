@@ -39,6 +39,8 @@
   function friendly(err) {
     var m = (err && err.message) || "";
     if (/duplicate key|unique/i.test(m)) return "Siswa ini sudah punya presensi di tanggal tersebut.";
+    if (/Keterangan izin wajib/i.test(m)) return "Status Izin wajib diisi keterangannya.";
+    if (/catatan tanggal lain/i.test(m)) return "Hanya developer yang boleh mengubah catatan tanggal lain.";
     if (/non-Islam/i.test(m)) return "Siswa non-Islam tidak ikut presensi sholat.";
     if (/Hanya developer/i.test(m)) return "Hanya developer yang boleh mengubah tanggal/jam.";
     if (/row-level security|permission denied|Tidak punya akses|Khusus developer/i.test(m)) return "Kamu tidak punya izin untuk aksi ini.";
@@ -84,11 +86,16 @@
   // ---------- banner info ----------
   function loadBanner() {
     return sb.rpc("get_info_aktif").then(function (r) {
-      var b = $("banner"), txt = r.data && r.data.length ? r.data[0].pesan : "";
-      b.textContent = txt ? "📢 " + txt : ""; b.hidden = !txt;
-      $("i-aktif").textContent = txt || "— (tidak ada)";
+      var txt = r.data && r.data.length ? r.data[0].pesan : "";
+      document.querySelectorAll(".infobar").forEach(function (b) {
+        b.querySelector(".info-text").textContent = txt; b.hidden = !txt;
+      });
     });
   }
+  document.addEventListener("click", function (e) {
+    var x = e.target.closest && e.target.closest(".info-x");
+    if (x) x.closest(".infobar").hidden = true;
+  });
 
   // ---------- LOGIN ----------
   var fails = 0, lockUntil = 0;
@@ -176,7 +183,7 @@
     $("d-tanggal").value = todayWIB();
     startIdle();
     switchTab("presensi");
-    return Promise.all([loadSiswa(), loadBanner()]).then(function () { return refreshToday(); });
+    return Promise.all([loadSiswa(), loadBanner(), noteLoad("np", todayWIB())]).then(function () { return refreshToday(); });
   }
 
   // ---------- TAB ----------
@@ -187,7 +194,7 @@
     if (name === "data") loadData();
     if (name === "monitor" && state.role === "developer") loadMonitor();
     if (name === "server" && state.role === "developer") loadServer();
-    if (name === "info" && state.role === "developer") loadBanner();
+    if (name === "info" && state.role === "developer") { loadBanner(); loadInfoList(); }
     if (name === "presensi") refreshToday();
   }
   $("tabs").addEventListener("click", function (e) {
@@ -254,15 +261,26 @@
     while (g.firstChild) box.appendChild(g.firstChild);
   }
 
+  $("s-status").addEventListener("change", function () {
+    var st = (document.querySelector("input[name=s-st]:checked") || {}).value;
+    $("s-ket-wrap").hidden = st !== "Izin";
+    if (st === "Izin") $("s-ket").focus();
+  });
   $("singleForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     var id = $("s-siswa").value, st = (document.querySelector("input[name=s-st]:checked") || {}).value;
     if (!id) { notice("Pilih nama siswa dulu.", "err"); return; }
     if (STATUS.indexOf(st) === -1) { notice("Pilih status presensi.", "err"); return; }
+    var row = { siswa_id: id, status: st };
+    if (st === "Izin") {
+      var k = $("s-ket").value.trim();
+      if (!k) { notice("Isi keterangan izin dulu.", "err"); $("s-ket").focus(); return; }
+      row.keterangan = k;
+    }
     var btn = $("s-btn"); btn.disabled = true; btn.textContent = "Mengirim…";
-    sb.from("presensi").insert({ siswa_id: id, status: st }).then(function (r) {
+    sb.from("presensi").insert(row).then(function (r) {
       if (r.error) { notice(friendly(r.error), "err"); }
-      else { notice("Presensi terkirim ✓", "ok"); $("s-siswa").value = ""; }
+      else { notice("Presensi terkirim ✓", "ok"); $("s-siswa").value = ""; $("s-ket").value = ""; $("s-ket-wrap").hidden = true; mountSingleChips(); }
       return refreshToday();
     }).then(function () { btn.disabled = false; btn.textContent = "Kirim presensi"; });
   });
@@ -279,18 +297,39 @@
       else if (done) nm.appendChild(el("span", "tag", "sudah: " + done));
       item.appendChild(nm);
       item.appendChild(el("div", "kl", s.kelas));
-      item.appendChild(chipGroup("b-" + s.id, off ? "" : "Hadir", off));
+      var grp = chipGroup("b-" + s.id, off ? "" : "Hadir", off);
+      item.appendChild(grp);
+      if (!off) {
+        var kw = el("div", "ketin"); kw.hidden = true;
+        var ki = document.createElement("input");
+        ki.type = "text"; ki.maxLength = 150; ki.id = "bk-" + s.id; ki.placeholder = "Keterangan izin (wajib)";
+        kw.appendChild(ki); item.appendChild(kw);
+        grp.addEventListener("change", function () {
+          var c = item.querySelector("input[type=radio]:checked");
+          kw.hidden = !(c && c.value === "Izin");
+          if (!kw.hidden) ki.focus();
+        });
+      }
       list.appendChild(item);
     });
   }
   $("bulkForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var rows = [];
+    var rows = [], missing = [];
     state.siswa.forEach(function (s) {
       if (s.nonis || state.todayMap[s.id]) return;
       var c = document.querySelector('input[name="b-' + s.id + '"]:checked');
-      if (c && STATUS.indexOf(c.value) !== -1) rows.push({ siswa_id: s.id, status: c.value });
+      if (c && STATUS.indexOf(c.value) !== -1) {
+        var row = { siswa_id: s.id, status: c.value };
+        if (c.value === "Izin") {
+          var k = ($("bk-" + s.id).value || "").trim();
+          if (!k) { missing.push(s.nama); return; }
+          row.keterangan = k;
+        }
+        rows.push(row);
+      }
     });
+    if (missing.length) { notice("Isi keterangan izin untuk: " + missing.join(", "), "err"); return; }
     if (!rows.length) { notice("Semua siswa sudah dipresensi hari ini.", "err"); return; }
     if (!window.confirm("Kirim presensi untuk " + rows.length + " siswa?")) return;
     var btn = $("b-btn"); btn.disabled = true; btn.textContent = "Mengirim…";
@@ -301,23 +340,50 @@
     }).then(function () { btn.disabled = false; btn.textContent = "Kirim presensi sekaligus"; });
   });
 
+  // ---------- helper hapus massal ----------
+  function typeHapus(pesan) {
+    if (!window.confirm(pesan)) return false;
+    var t = window.prompt("Ketik HAPUS (huruf besar) untuk melanjutkan:");
+    return t !== null && t.trim() === "HAPUS";
+  }
+
   // ---------- DATA ----------
+  var dsel = {}, drows = [];
+  function dCount() { return Object.keys(dsel).length; }
+  function dBar() {
+    var n = dCount();
+    $("d-del-sel").textContent = "Hapus terpilih (" + n + ")";
+    $("d-del-sel").disabled = n === 0;
+    $("d-del-all").disabled = drows.length === 0;
+    $("d-all").disabled = drows.length === 0;
+    $("d-all").checked = drows.length > 0 && n === drows.length;
+    document.querySelectorAll("#d-list .ditem").forEach(function (it) { it.classList.toggle("sel", !!dsel[it.dataset.id]); });
+  }
   function loadData() {
     var tgl = $("d-tanggal").value || todayWIB();
-    var list = $("d-list"); list.innerHTML = "";
-    sb.from("presensi").select("id,tanggal,jam,status,siswa:siswa_id(nama,kelas)").eq("tanggal", tgl).then(function (r) {
+    var list = $("d-list"); list.innerHTML = ""; dsel = {}; drows = [];
+    dBar();
+    noteLoad("nd", tgl);
+    sb.from("presensi").select("id,tanggal,jam,status,keterangan,siswa:siswa_id(nama,kelas)").eq("tanggal", tgl).then(function (r) {
       if (r.error) { notice(friendly(r.error), "err"); return; }
       var rows = (r.data || []).slice().sort(function (a, b) { return (a.siswa.nama).toLowerCase() < (b.siswa.nama).toLowerCase() ? -1 : 1; });
+      drows = rows;
       $("d-kosong").hidden = rows.length > 0;
       rows.forEach(function (x) {
-        var it = el("div", "ditem");
+        var it = el("div", "ditem"); it.dataset.id = x.id;
         var top = el("div", "top2");
+        var lead = el("div", "lead");
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.setAttribute("aria-label", "Pilih " + x.siswa.nama);
+        cb.addEventListener("change", function () { if (cb.checked) dsel[x.id] = true; else delete dsel[x.id]; dBar(); });
+        lead.appendChild(cb);
         var left = el("div");
         left.appendChild(el("div", "nm", x.siswa.nama));
         left.appendChild(el("div", "meta", x.siswa.kelas + " • " + hariTgl(x.tanggal) + " • " + String(x.jam).slice(0, 5)));
-        top.appendChild(left);
+        lead.appendChild(left);
+        top.appendChild(lead);
         top.appendChild(el("span", "badge " + kelasBadge(x.status), x.status));
         it.appendChild(top);
+        if (x.status === "Izin" && x.keterangan) it.appendChild(el("div", "ketx", "Keterangan: " + x.keterangan));
         var act = el("div", "act");
         var be = el("button", "btn small", "Ubah"); be.type = "button";
         be.addEventListener("click", function () { openEdit(x); });
@@ -326,10 +392,35 @@
         act.appendChild(be); act.appendChild(bd); it.appendChild(act);
         list.appendChild(it);
       });
+      dBar();
     });
   }
   $("d-muat").addEventListener("click", loadData);
   $("d-tanggal").addEventListener("change", loadData);
+  $("d-all").addEventListener("change", function () {
+    var on = $("d-all").checked; dsel = {};
+    document.querySelectorAll("#d-list .ditem").forEach(function (it) {
+      var c = it.querySelector("input[type=checkbox]"); c.checked = on; if (on) dsel[it.dataset.id] = true;
+    });
+    dBar();
+  });
+  function afterDelete(r, okMsg) {
+    if (r.error) notice(friendly(r.error), "err");
+    else if (!r.data || !r.data.length) notice("Tidak ada data yang terhapus (tidak ada izin atau sudah hilang).", "err");
+    else notice(r.data.length + " " + okMsg, "ok");
+    loadData(); refreshToday();
+  }
+  $("d-del-sel").addEventListener("click", function () {
+    var ids = Object.keys(dsel); if (!ids.length) return;
+    if (!window.confirm("Hapus " + ids.length + " presensi yang dicentang? Tidak bisa dibatalkan.")) return;
+    sb.from("presensi").delete().in("id", ids).select("id").then(function (r) { afterDelete(r, "presensi dihapus."); });
+  });
+  $("d-del-all").addEventListener("click", function () {
+    if (!drows.length) return;
+    var tgl = $("d-tanggal").value || todayWIB();
+    if (!typeHapus("Hapus SEMUA " + drows.length + " presensi pada " + hariTgl(tgl) + "? Tidak bisa dibatalkan.")) return;
+    sb.from("presensi").delete().eq("tanggal", tgl).select("id").then(function (r) { afterDelete(r, "presensi dihapus."); });
+  });
 
   function hapus(x) {
     if (!window.confirm("Hapus presensi " + x.siswa.nama + " (" + x.status + ")? Tindakan ini tidak bisa dibatalkan.")) return;
@@ -341,11 +432,55 @@
     });
   }
 
+  // ---------- CATATAN HARI ----------
+  function noteLoad(pre, date) {
+    var ta = $(pre + "-text"); ta.value = "";
+    if (pre === "nd") {
+      var locked = state.role !== "developer" && date !== todayWIB();
+      ta.disabled = locked; $("nd-save").disabled = locked; $("nd-del").disabled = locked;
+      $("nd-info").textContent = locked ? "Hanya developer yang boleh mengubah catatan tanggal lain." : "";
+    }
+    return sb.from("catatan_hari").select("catatan").eq("tanggal", date).maybeSingle().then(function (r) {
+      ta.value = r.data ? r.data.catatan : "";
+      if (pre === "np") $("np-count").textContent = ta.value.length;
+    });
+  }
+  function noteSave(pre, date, text, msg) {
+    return sb.rpc("simpan_catatan", { p_tanggal: date, p_catatan: text }).then(function (r) {
+      if (r.error) notice(friendly(r.error), "err"); else notice(msg, "ok");
+      return noteLoad(pre, date);
+    });
+  }
+  $("np-text").addEventListener("input", function () { $("np-count").textContent = $("np-text").value.length; });
+  $("np-save").addEventListener("click", function () {
+    var t = $("np-text").value.trim();
+    if (!t) { notice("Tulis catatan dulu, atau pakai tombol Hapus catatan.", "err"); return; }
+    noteSave("np", todayWIB(), t, "Catatan hari ini disimpan ✓");
+  });
+  $("np-del").addEventListener("click", function () {
+    if (!window.confirm("Hapus catatan hari ini?")) return;
+    noteSave("np", todayWIB(), "", "Catatan hari ini dihapus.");
+  });
+  $("nd-save").addEventListener("click", function () {
+    var t = $("nd-text").value.trim();
+    if (!t) { notice("Tulis catatan dulu, atau pakai tombol Hapus catatan.", "err"); return; }
+    noteSave("nd", $("d-tanggal").value || todayWIB(), t, "Catatan disimpan ✓");
+  });
+  $("nd-del").addEventListener("click", function () {
+    if (!window.confirm("Hapus catatan tanggal ini?")) return;
+    noteSave("nd", $("d-tanggal").value || todayWIB(), "", "Catatan dihapus.");
+  });
+
+  // ---------- UBAH (dialog) ----------
   var dlg = $("editDlg");
+  function toggleEditKet() { $("e-ket-wrap").hidden = $("e-status").value !== "Izin"; }
+  $("e-status").addEventListener("change", toggleEditKet);
   function openEdit(x) {
     state.editing = x;
     $("e-nama").textContent = x.siswa.nama + " — " + x.siswa.kelas;
     $("e-status").value = x.status;
+    $("e-ket").value = x.keterangan || "";
+    toggleEditKet();
     $("e-dev").hidden = state.role !== "developer";
     $("e-tanggal").value = x.tanggal;
     $("e-jam").value = String(x.jam).slice(0, 5);
@@ -357,7 +492,12 @@
     var x = state.editing; if (!x) return;
     var st = $("e-status").value;
     if (STATUS.indexOf(st) === -1) return;
-    var patch = { status: st };
+    var patch = { status: st, keterangan: null };
+    if (st === "Izin") {
+      var k = $("e-ket").value.trim();
+      if (!k) { notice("Isi keterangan izin dulu.", "err"); dlg.close(); return; }
+      patch.keterangan = k;
+    }
     if (state.role === "developer") {
       var t = $("e-tanggal").value, j = $("e-jam").value;
       if (!t || !j) { notice("Tanggal dan jam wajib diisi.", "err"); return; }
@@ -374,20 +514,56 @@
   });
 
   // ---------- MONITORING (developer) ----------
+  var msel = {}, mrows = [];
+  function mBar() {
+    var n = Object.keys(msel).length;
+    $("m-del-sel").textContent = "Hapus terpilih (" + n + ")";
+    $("m-del-sel").disabled = n === 0;
+    $("m-del-all").disabled = mrows.length === 0;
+    $("m-all").disabled = mrows.length === 0;
+    $("m-all").checked = mrows.length > 0 && n === mrows.length;
+  }
   function loadMonitor() {
-    var body = $("m-body"); body.innerHTML = "";
-    sb.from("log_login").select("waktu,email,role,event,ip,perangkat").order("waktu", { ascending: false }).limit(100).then(function (r) {
+    var body = $("m-body"); body.innerHTML = ""; msel = {}; mrows = []; mBar();
+    sb.from("log_login").select("id,waktu,email,role,event,ip,perangkat").order("waktu", { ascending: false }).limit(100).then(function (r) {
       if (r.error) { notice(friendly(r.error), "err"); return; }
       var label = { login: "Masuk", logout: "Keluar", timeout: "Keluar otomatis" };
-      (r.data || []).forEach(function (x) {
+      mrows = r.data || [];
+      mrows.forEach(function (x) {
         var tr = el("tr");
+        var tc = el("td", "cb");
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.dataset.id = x.id; cb.setAttribute("aria-label", "Pilih log");
+        cb.addEventListener("change", function () { if (cb.checked) msel[x.id] = true; else delete msel[x.id]; mBar(); });
+        tc.appendChild(cb); tr.appendChild(tc);
         [waktuWIB(x.waktu), x.email || "-", x.role || "-", label[x.event] || x.event, x.ip || "-"].forEach(function (v) { tr.appendChild(el("td", "", v)); });
         var ua = el("td", "ua", x.perangkat || "-"); ua.title = x.perangkat || ""; tr.appendChild(ua);
         body.appendChild(tr);
       });
+      mBar();
     });
   }
   $("m-muat").addEventListener("click", loadMonitor);
+  $("m-all").addEventListener("change", function () {
+    var on = $("m-all").checked; msel = {};
+    document.querySelectorAll("#m-body input[type=checkbox]").forEach(function (c) { c.checked = on; if (on) msel[c.dataset.id] = true; });
+    mBar();
+  });
+  function afterLogDelete(r) {
+    if (r.error) notice(friendly(r.error), "err");
+    else if (!r.data || !r.data.length) notice("Tidak ada log yang terhapus.", "err");
+    else notice(r.data.length + " catatan log dihapus.", "ok");
+    loadMonitor();
+  }
+  $("m-del-sel").addEventListener("click", function () {
+    var ids = Object.keys(msel).map(Number); if (!ids.length) return;
+    if (!window.confirm("Hapus " + ids.length + " catatan log yang dicentang?")) return;
+    sb.from("log_login").delete().in("id", ids).select("id").then(afterLogDelete);
+  });
+  $("m-del-all").addEventListener("click", function () {
+    if (!mrows.length) return;
+    if (!typeHapus("Hapus SEMUA catatan log login (termasuk yang tidak terlihat di daftar ini)? Tidak bisa dibatalkan.")) return;
+    sb.from("log_login").delete().gt("id", 0).select("id").then(afterLogDelete);
+  });
 
   // ---------- INFO SERVER (developer) ----------
   function loadServer() {
@@ -418,21 +594,73 @@
 
   // ---------- TULIS INFO (developer) ----------
   $("i-text").addEventListener("input", function () { $("i-count").textContent = $("i-text").value.length; });
+  $("i-durasi").addEventListener("change", function () { $("i-custom-wrap").hidden = $("i-durasi").value !== "custom"; });
+  var DUR = { "1h": 3600e3, "6h": 6 * 3600e3, "24h": 24 * 3600e3, "3d": 3 * 86400e3, "7d": 7 * 86400e3 };
+
+  function hitungBerakhir() {                 // null = tidak pernah hilang; false = tidak valid
+    var d = $("i-durasi").value;
+    if (d === "never") return null;
+    if (DUR[d]) return new Date(Date.now() + DUR[d]).toISOString();
+    var v = $("i-custom").value;              // "2026-11-20T15:30" dianggap WIB
+    if (!v) return false;
+    var t = new Date(v + ":00+07:00");
+    if (isNaN(t) || t.getTime() <= Date.now()) return false;
+    return t.toISOString();
+  }
   $("i-kirim").addEventListener("click", function () {
     var t = $("i-text").value.trim();
     if (!t) { notice("Tulis isi info dulu.", "err"); return; }
-    sb.rpc("tulis_info", { p_pesan: t }).then(function (r) {
+    var akhir = hitungBerakhir();
+    if (akhir === false) { notice("Pilih waktu hilang yang valid (harus di masa depan).", "err"); return; }
+    var btn = $("i-kirim"); btn.disabled = true;
+    sb.rpc("tulis_info", { p_pesan: t, p_berakhir: akhir }).then(function (r) {
+      btn.disabled = false;
       if (r.error) { notice(friendly(r.error), "err"); return; }
-      $("i-text").value = ""; $("i-count").textContent = "0";
-      notice("Banner info ditampilkan ✓", "ok"); loadBanner();
+      $("i-text").value = ""; $("i-count").textContent = "0"; $("i-durasi").value = "never"; $("i-custom-wrap").hidden = true; $("i-custom").value = "";
+      notice("Banner info ditampilkan ✓", "ok"); loadBanner(); loadInfoList();
     });
   });
-  $("i-mati").addEventListener("click", function () {
-    sb.rpc("matikan_info").then(function (r) {
+
+  function loadInfoList() {
+    var list = $("i-list"); list.innerHTML = "";
+    sb.from("info_web").select("id,pesan,aktif,berakhir_pada,dibuat_pada").order("dibuat_pada", { ascending: false }).limit(10).then(function (r) {
       if (r.error) { notice(friendly(r.error), "err"); return; }
-      notice("Banner info dimatikan.", "ok"); loadBanner();
+      var rows = r.data || [];
+      $("i-kosong").hidden = rows.length > 0;
+      rows.forEach(function (x) {
+        var expired = x.berakhir_pada && new Date(x.berakhir_pada).getTime() <= Date.now();
+        var tampil = x.aktif && !expired;
+        var it = el("div", "iitem");
+        it.appendChild(el("div", "it", x.pesan));
+        it.appendChild(el("span", "badge st " + (tampil ? "tampil" : expired && x.aktif ? "habis" : "off"), tampil ? "Sedang tampil" : (x.aktif && expired ? "Sudah berakhir" : "Dihentikan")));
+        it.appendChild(el("div", "meta", "Dibuat " + waktuWIB(x.dibuat_pada) + " • " + (x.berakhir_pada ? "Hilang " + waktuWIB(x.berakhir_pada) : "Tidak pernah hilang")));
+        var act = el("div", "act");
+        if (tampil) {
+          var bs = el("button", "btn small", "Stop info"); bs.type = "button";
+          bs.addEventListener("click", function () {
+            if (!window.confirm("Hentikan info ini? Banner akan hilang tapi info tetap ada di daftar.")) return;
+            sb.rpc("stop_info", { p_id: x.id }).then(function (r2) {
+              if (r2.error) notice(friendly(r2.error), "err"); else notice("Info dihentikan (hilang dari banner).", "ok");
+              loadBanner(); loadInfoList();
+            });
+          });
+          act.appendChild(bs);
+        }
+        var bd = el("button", "btn small danger", "Hapus info"); bd.type = "button";
+        bd.addEventListener("click", function () {
+          if (!window.confirm("Hapus info ini secara permanen?")) return;
+          sb.rpc("hapus_info", { p_id: x.id }).then(function (r2) {
+            if (r2.error) notice(friendly(r2.error), "err"); else notice("Info dihapus.", "ok");
+            loadBanner(); loadInfoList();
+          });
+        });
+        act.appendChild(bd);
+        it.appendChild(act);
+        list.appendChild(it);
+      });
     });
-  });
+  }
+  $("i-muat").addEventListener("click", loadInfoList);
 
   // ---------- MULAI ----------
   mountSingleChips();

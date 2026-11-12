@@ -13,26 +13,29 @@
   <meta property="og:title" content="Presensi BE — Input Presensi Sholat">
   <meta property="og:description" content="Halaman khusus pengelola untuk menginput presensi sholat siswa.">
   <meta property="og:url" content="https://presensi-y-be.vercel.app/">
-  <meta property="og:image" content="https://presensi-y-be.vercel.app/og-image.png">
+  <meta property="og:image" content="https://presensi-y-be.vercel.app/images/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="id_ID">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://presensi-y-be.vercel.app/og-image.png">
+  <meta name="twitter:image" content="https://presensi-y-be.vercel.app/images/og-image.png">
 
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="banner" class="banner" hidden role="status"></div>
-
   <!-- ================= LOGIN ================= -->
   <section id="loginView" class="login-wrap" hidden>
+    <div class="infobar" hidden role="status">
+  <span class="info-ico" aria-hidden="true">📢</span>
+  <div class="info-body"><strong>Info</strong><p class="info-text"></p></div>
+  <button class="info-x" type="button" aria-label="Tutup info">✕</button>
+</div>
     <div class="login-card">
-      <img src="icon-192.png" alt="" class="login-logo" width="72" height="72">
+      <img src="images/icon-192.png" alt="" class="login-logo" width="72" height="72">
       <h1>Presensi BE</h1>
       <p class="muted">Khusus <strong>Developer</strong> &amp; <strong>Author</strong>. Tidak ada pendaftaran akun.</p>
       <form id="loginForm" autocomplete="on" novalidate>
@@ -56,7 +59,7 @@
   <div id="appView" hidden>
     <header class="top">
       <div class="top-inner">
-        <img src="icon-192.png" alt="" class="logo" width="40" height="40">
+        <img src="images/icon-192.png" alt="" class="logo" width="40" height="40">
         <div class="brand">
           <h1>Presensi BE</h1>
           <p><span id="who"></span></p>
@@ -74,6 +77,12 @@
     </header>
 
     <main class="wrap">
+      <div class="infobar" hidden role="status">
+        <span class="info-ico" aria-hidden="true">📢</span>
+        <div class="info-body"><strong>Info</strong><p class="info-text"></p></div>
+        <button class="info-x" type="button" aria-label="Tutup info">✕</button>
+      </div>
+
       <p id="notice" class="notice" role="status" hidden></p>
 
       <!-- ===== PRESENSI ===== -->
@@ -95,6 +104,9 @@
               <legend>Status</legend>
               <div class="chips" id="s-status"></div>
             </fieldset>
+            <label id="s-ket-wrap" hidden>Keterangan izin <span class="req">(wajib)</span>
+              <input id="s-ket" type="text" maxlength="150" placeholder="Contoh: Acara keluarga / lomba di sekolah">
+            </label>
             <button id="s-btn" class="btn primary block" type="submit">Kirim presensi</button>
           </form>
 
@@ -104,6 +116,19 @@
             <div id="b-list" class="blist"></div>
             <button id="b-btn" class="btn primary block" type="submit">Kirim presensi sekaligus</button>
           </form>
+        </div>
+
+        <div class="card" id="note-p">
+          <h2>Catatan hari ini</h2>
+          <p class="muted small">Isi bila tidak ada yang sholat / ada hal khusus hari ini (mis. libur, hujan deras, ujian). Tampil di web Presensi Bu Yuni.</p>
+          <label>Catatan
+            <textarea id="np-text" rows="3" maxlength="300" placeholder="Contoh: Tidak ada yang sholat karena sekolah libur"></textarea>
+          </label>
+          <p class="muted small"><span id="np-count">0</span>/300</p>
+          <div class="row">
+            <button class="btn primary" id="np-save" type="button">Simpan catatan</button>
+            <button class="btn" id="np-del" type="button">Hapus catatan</button>
+          </div>
         </div>
       </section>
 
@@ -117,8 +142,25 @@
             </label>
             <button class="btn" id="d-muat" type="button">Muat</button>
           </div>
+          <div class="bulkbar" id="d-bar">
+            <label class="chk"><input type="checkbox" id="d-all"> <span>Pilih semua</span></label>
+            <button class="btn small danger" id="d-del-sel" type="button" disabled>Hapus terpilih (0)</button>
+            <button class="btn small danger" id="d-del-all" type="button">Hapus semua tanggal ini</button>
+          </div>
           <div id="d-list" class="dlist"></div>
           <p id="d-kosong" class="empty-text" hidden>Belum ada presensi di tanggal ini.</p>
+        </div>
+
+        <div class="card" id="note-d">
+          <h2>Catatan tanggal ini</h2>
+          <label>Catatan
+            <textarea id="nd-text" rows="3" maxlength="300" placeholder="Belum ada catatan"></textarea>
+          </label>
+          <p class="muted small" id="nd-info"></p>
+          <div class="row">
+            <button class="btn primary" id="nd-save" type="button">Simpan catatan</button>
+            <button class="btn" id="nd-del" type="button">Hapus catatan</button>
+          </div>
         </div>
       </section>
 
@@ -127,9 +169,14 @@
         <div class="card">
           <div class="row between"><h2>Monitoring login</h2><button class="btn small" id="m-muat" type="button">Segarkan</button></div>
           <p class="muted small">100 aktivitas terakhir. Waktu dalam WIB.</p>
+          <div class="bulkbar">
+            <label class="chk"><input type="checkbox" id="m-all"> <span>Pilih semua</span></label>
+            <button class="btn small danger" id="m-del-sel" type="button" disabled>Hapus terpilih (0)</button>
+            <button class="btn small danger" id="m-del-all" type="button">Hapus semua log</button>
+          </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Waktu</th><th>Email</th><th>Peran</th><th>Aksi</th><th>IP</th><th>Perangkat</th></tr></thead>
+              <thead><tr><th class="cb"></th><th>Waktu</th><th>Email</th><th>Peran</th><th>Aksi</th><th>IP</th><th>Perangkat</th></tr></thead>
               <tbody id="m-body"></tbody>
             </table>
           </div>
@@ -148,16 +195,33 @@
       <section id="tab-info" class="tabview" hidden>
         <div class="card">
           <h2>Tulis info (banner)</h2>
-          <p class="muted">Pesan ini tampil sebagai banner di atas <strong>Presensi BE</strong> dan <strong>Presensi Bu Yuni</strong>.</p>
+          <p class="muted">Tampil sebagai kartu info di bagian atas isi halaman <strong>Presensi BE</strong> dan <strong>Presensi Bu Yuni</strong>. Info baru menggantikan info yang sedang tampil.</p>
           <label>Isi info
             <textarea id="i-text" rows="3" maxlength="300" placeholder="Contoh: Presensi hari Jumat dimulai pukul 11.30"></textarea>
           </label>
           <p class="muted small"><span id="i-count">0</span>/300</p>
-          <div class="row">
-            <button class="btn primary" id="i-kirim" type="button">Tampilkan banner</button>
-            <button class="btn" id="i-mati" type="button">Matikan banner</button>
-          </div>
-          <p class="muted small">Banner aktif saat ini: <strong id="i-aktif">—</strong></p>
+          <label>Jadwal info
+            <select id="i-durasi">
+              <option value="never">Tidak pernah hilang</option>
+              <option value="1h">1 jam lagi</option>
+              <option value="6h">6 jam lagi</option>
+              <option value="24h">24 jam lagi</option>
+              <option value="3d">3 hari lagi</option>
+              <option value="7d">7 hari lagi</option>
+              <option value="custom">Pilih tanggal &amp; jam…</option>
+            </select>
+          </label>
+          <label id="i-custom-wrap" hidden>Hilang pada (WIB)
+            <input type="datetime-local" id="i-custom">
+          </label>
+          <button class="btn primary block" id="i-kirim" type="button">Tampilkan banner</button>
+        </div>
+
+        <div class="card">
+          <div class="row between"><h2>Daftar info</h2><button class="btn small" id="i-muat" type="button">Segarkan</button></div>
+          <p class="muted small"><strong>Stop info</strong> = hanya dihilangkan dari banner. <strong>Hapus info</strong> = dihapus permanen.</p>
+          <div id="i-list" class="ilist"></div>
+          <p id="i-kosong" class="empty-text" hidden>Belum ada info.</p>
         </div>
       </section>
 
@@ -182,8 +246,10 @@
         <li>Menu <strong>Presensi</strong>: pilih mode <em>Satu per satu</em> (bawaan) atau <em>Sekaligus</em>.</li>
         <li>Satu per satu: pilih nama, pilih status (Hadir/Sakit/Izin/Alfa), tekan <strong>Kirim presensi</strong>.</li>
         <li>Sekaligus: ubah status siswa yang tidak hadir, lalu tekan <strong>Kirim presensi sekaligus</strong>.</li>
-        <li>Menu <strong>Data</strong>: pilih tanggal, lalu ubah status atau hapus bila salah input.</li>
-        <li>Developer juga punya menu Monitoring, Server, dan Tulis Info; serta bisa mengubah tanggal &amp; jam.</li>
+        <li>Jika status <strong>Izin</strong>, kolom <strong>Keterangan</strong> muncul dan wajib diisi (tampil di web Presensi Bu Yuni).</li>
+        <li>Kartu <strong>Catatan hari ini</strong>: tulis alasan jika tidak ada yang sholat atau ada hal khusus hari itu.</li>
+        <li>Menu <strong>Data</strong>: pilih tanggal, lalu ubah status, hapus satu data, atau centang beberapa data untuk <strong>Hapus terpilih</strong> / <strong>Hapus semua</strong>.</li>
+        <li>Developer juga punya menu Monitoring (bisa hapus log dengan centang), Server, dan Tulis Info; serta bisa mengubah tanggal &amp; jam dan catatan tanggal lain.</li>
         <li>Selesai? Tekan <strong>Keluar</strong>. Setelah 30 menit tidak aktif, kamu keluar otomatis.</li>
       </ol>
     </div>
@@ -207,6 +273,9 @@
         <select id="e-status">
           <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Alfa</option>
         </select>
+      </label>
+      <label id="e-ket-wrap" hidden>Keterangan izin <span class="req">(wajib)</span>
+        <input id="e-ket" type="text" maxlength="150" placeholder="Alasan izin">
       </label>
       <div class="dev-only" id="e-dev" hidden>
         <label>Tanggal <input type="date" id="e-tanggal"></label>

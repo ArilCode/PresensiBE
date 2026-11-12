@@ -159,3 +159,37 @@ dialog label{margin-top:.6rem}
 
 .login-wrap{flex-direction:column;justify-content:flex-start;padding-top:2rem}
 .about-inline{width:100%;max-width:640px;margin-top:1rem;text-align:left}
+
+/* ===== keterangan, catatan, centang ===== */
+.req{font-weight:400;color:var(--danger)}
+.bulkbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.4rem 0 .6rem}
+.chk{display:flex;flex-direction:row;align-items:center;gap:.5rem;margin:0;font-weight:600;cursor:pointer}
+input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;accent-color:var(--primary);flex:none}
+.ditem .top2{align-items:flex-start}
+.ditem .lead{display:flex;gap:.7rem;align-items:flex-start}
+.ditem.sel{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,transparent)}
+.ditem .ketx{font-size:.88rem;font-style:italic;word-break:break-word}
+.bitem .ketin{margin-top:.5rem}
+th.cb,td.cb{width:34px;text-align:center}
+.btn.danger[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ===== banner info (kartu, di dalam konten) ===== */
+.infobar{display:flex;gap:.75rem;align-items:flex-start;margin:0 0 1rem;padding:.8rem .8rem .8rem .9rem;border-radius:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 15%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-left:5px solid var(--accent);box-shadow:var(--shadow);animation:infoin .35s ease}
+.info-ico{flex:none;width:38px;height:38px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:1.1rem}
+.info-body{flex:1;min-width:0}
+.info-body strong{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.info-text{margin:.1rem 0 0;white-space:pre-wrap;word-break:break-word;font-weight:600;line-height:1.45}
+.info-x{flex:none;background:none;border:0;color:var(--muted);font-size:1rem;cursor:pointer;padding:.35rem .5rem;border-radius:8px;min-height:36px;min-width:36px}
+.info-x:hover{background:var(--line)}
+@keyframes infoin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.infobar{animation:none}}
+
+.login-wrap .infobar{width:100%;max-width:400px;text-align:left}
+.ilist .iitem{border:1px solid var(--line);border-radius:12px;padding:.7rem;margin-bottom:.6rem;display:grid;gap:.4rem}
+.iitem .it{white-space:pre-wrap;word-break:break-word;font-weight:600}
+.iitem .meta{color:var(--muted);font-size:.85rem}
+.iitem .act{display:flex;gap:.5rem;flex-wrap:wrap}
+.iitem .st{justify-self:start}
+.badge.off{background:var(--muted)}
+.badge.tampil{background:var(--hadir)}
+.badge.habis{background:var(--sakit)}
