@@ -45,7 +45,10 @@
         <label>Password
           <div class="pw">
             <input id="l-pass" type="password" autocomplete="current-password" required>
-            <button type="button" id="l-show" class="pw-btn" aria-label="Tampilkan password">👁</button>
+            <button type="button" id="l-show" class="pw-btn" aria-label="Tampilkan password" aria-pressed="false">
+              <svg id="eye-off" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12A3 3 0 1 1 9.88 9.88"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <svg id="eye-on" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
         </label>
         <p id="l-error" class="error" role="alert" hidden></p>
@@ -200,7 +203,7 @@
             <textarea id="i-text" rows="3" maxlength="300" placeholder="Contoh: Presensi hari Jumat dimulai pukul 11.30"></textarea>
           </label>
           <p class="muted small"><span id="i-count">0</span>/300</p>
-          <label>Jadwal info
+          <label>Hilang kapan?
             <select id="i-durasi">
               <option value="never">Tidak pernah hilang</option>
               <option value="1h">1 jam lagi</option>

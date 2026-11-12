@@ -100,8 +100,13 @@
   // ---------- LOGIN ----------
   var fails = 0, lockUntil = 0;
   $("l-show").addEventListener("click", function () {
-    var p = $("l-pass"); p.type = p.type === "password" ? "text" : "password";
+    var p = $("l-pass"), show = p.type === "password";
+    p.type = show ? "text" : "password";                  // dilihat = mata terbuka, disembunyikan = mata dicoret
+    $("eye-on").toggleAttribute("hidden", !show); $("eye-off").toggleAttribute("hidden", show);
+    $("l-show").setAttribute("aria-pressed", String(show));
+    $("l-show").setAttribute("aria-label", show ? "Sembunyikan password" : "Tampilkan password");
   });
+
   $("l-about").addEventListener("click", function () {
     var box = $("loginView").querySelector(".about-inline");
     if (box) { box.remove(); return; }
@@ -151,27 +156,51 @@
     loadBanner();
   }
 
+  function showTimeoutMsg() {
+    $("l-error").textContent = "Sesi berakhir karena 30 menit tidak aktif. Silakan login ulang.";
+    $("l-error").hidden = false;
+  }
+  var loggingOut = false;
   function doLogout(event) {
+    if (!state.role || loggingOut) return Promise.resolve();   // sudah/sedang keluar
+    loggingOut = true;
     stopIdle();
     return sb.rpc("catat_log", { p_event: event, p_ua: navigator.userAgent })
       .then(function () { return sb.auth.signOut(); })
       .catch(function () { return sb.auth.signOut(); })
-      .then(function () { showLogin(); if (event === "timeout") { $("l-error").textContent = "Kamu keluar otomatis karena 30 menit tidak aktif."; $("l-error").hidden = false; } });
+      .then(function () { loggingOut = false; showLogin(); if (event === "timeout") { showTimeoutMsg(); } });
   }
   $("logoutBtn").addEventListener("click", function () { doLogout("logout"); });
   sb.auth.onAuthStateChange(function (evt) { if (evt === "SIGNED_OUT" && !$("appView").hidden) showLogin(); });
 
-  // ---------- idle timeout ----------
-  var idleTimer, idleBound = false;
-  function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(function () { doLogout("timeout"); }, IDLE_MS); }
+  // ---------- idle timeout (30 menit) ----------
+  // Berbasis JAM (timestamp), bukan hanya timer, supaya tetap bekerja walau HP dikunci /
+  // tab di latar belakang / browser menghentikan timer.
+  var LAST_KEY = "presensi_last_active", idleBound = false, idleIv = null, lastTouch = 0;
+  function getLast() { try { return +sessionStorage.getItem(LAST_KEY) || 0; } catch (e) { return 0; } }
+  function touch(force) {
+    var n = Date.now();
+    if (!force && n - lastTouch < 1000) return;           // batasi tulis 1x per detik
+    lastTouch = n;
+    try { sessionStorage.setItem(LAST_KEY, String(n)); } catch (e) { /* diabaikan */ }
+  }
+  function idleExpired() { var l = getLast(); return !l || Date.now() - l > IDLE_MS; }
+  function checkIdle() { if (state.role && idleExpired()) doLogout("timeout"); }
   function startIdle() {
-    resetIdle();
+    touch(true);
     if (!idleBound) {
-      ["click", "keydown", "touchstart", "scroll"].forEach(function (e) { window.addEventListener(e, function () { if (state.role) resetIdle(); }, { passive: true }); });
+      ["pointerdown", "click", "keydown", "touchstart", "scroll", "input"].forEach(function (e) {
+        window.addEventListener(e, function () { if (state.role) { if (idleExpired()) checkIdle(); else touch(); } }, { passive: true, capture: true });
+      });
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) checkIdle(); });
+      window.addEventListener("focus", checkIdle);
+      window.addEventListener("pageshow", checkIdle);
       idleBound = true;
     }
+    clearInterval(idleIv);
+    idleIv = setInterval(checkIdle, 15000);
   }
-  function stopIdle() { clearTimeout(idleTimer); }
+  function stopIdle() { clearInterval(idleIv); idleIv = null; }
 
   // ---------- MASUK APLIKASI ----------
   function enterApp(role) {
@@ -646,6 +675,20 @@
           });
           act.appendChild(bs);
         }
+        if (!tampil) {
+          var bj = el("button", "btn small primary", "Jalankan info"); bj.type = "button";
+          bj.addEventListener("click", function () {
+            var pesan = expired
+              ? "Waktu hilang info ini sudah lewat. Jalankan lagi TANPA batas waktu (tidak pernah hilang)?"
+              : "Jalankan info ini lagi? Info yang sedang tampil (jika ada) akan digantikan.";
+            if (!window.confirm(pesan)) return;
+            sb.rpc("jalankan_info", { p_id: x.id }).then(function (r2) {
+              if (r2.error) notice(friendly(r2.error), "err"); else notice("Info dijalankan, banner tampil lagi ✓", "ok");
+              loadBanner(); loadInfoList();
+            });
+          });
+          act.appendChild(bj);
+        }
         var bd = el("button", "btn small danger", "Hapus info"); bd.type = "button";
         bd.addEventListener("click", function () {
           if (!window.confirm("Hapus info ini secara permanen?")) return;
@@ -666,6 +709,10 @@
   mountSingleChips();
   sb.auth.getSession().then(function (r) {
     if (r.data && r.data.session) {
+      if (idleExpired()) {                                // sesi lama + sudah lewat 30 menit -> wajib login ulang
+        sb.auth.signOut().then(function () { showLogin(); showTimeoutMsg(); });
+        return;
+      }
       loadRole().then(function (role) { if (role) enterApp(role); else { sb.auth.signOut(); showLogin(); } });
     } else {
       showLogin();
