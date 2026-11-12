@@ -1,14 +1,231 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Presensi BE — Input Presensi Sholat</title>
+  <meta name="description" content="Halaman khusus pengelola untuk menginput presensi (absensi) sholat siswa.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#b45309">
+  <link rel="canonical" href="https://presensi-y-be.vercel.app/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Presensi BE — Input Presensi Sholat">
+  <meta property="og:description" content="Halaman khusus pengelola untuk menginput presensi sholat siswa.">
+  <meta property="og:url" content="https://presensi-y-be.vercel.app/">
+  <meta property="og:image" content="https://presensi-y-be.vercel.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="id_ID">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://presensi-y-be.vercel.app/og-image.png">
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <h1>hello world</h1>
-</body>
+  <div id="banner" class="banner" hidden role="status"></div>
 
+  <!-- ================= LOGIN ================= -->
+  <section id="loginView" class="login-wrap" hidden>
+    <div class="login-card">
+      <img src="icon-192.png" alt="" class="login-logo" width="72" height="72">
+      <h1>Presensi BE</h1>
+      <p class="muted">Khusus <strong>Developer</strong> &amp; <strong>Author</strong>. Tidak ada pendaftaran akun.</p>
+      <form id="loginForm" autocomplete="on" novalidate>
+        <label>Email
+          <input id="l-email" type="email" autocomplete="username" inputmode="email" required>
+        </label>
+        <label>Password
+          <div class="pw">
+            <input id="l-pass" type="password" autocomplete="current-password" required>
+            <button type="button" id="l-show" class="pw-btn" aria-label="Tampilkan password">👁</button>
+          </div>
+        </label>
+        <p id="l-error" class="error" role="alert" hidden></p>
+        <button id="l-btn" class="btn primary block" type="submit">Masuk</button>
+      </form>
+      <p class="muted small"><button type="button" class="linkbtn" id="l-about">Tentang &amp; cara menggunakan</button></p>
+    </div>
+  </section>
+
+  <!-- ================= APLIKASI ================= -->
+  <div id="appView" hidden>
+    <header class="top">
+      <div class="top-inner">
+        <img src="icon-192.png" alt="" class="logo" width="40" height="40">
+        <div class="brand">
+          <h1>Presensi BE</h1>
+          <p><span id="who"></span></p>
+        </div>
+        <button id="logoutBtn" class="btn small" type="button">Keluar</button>
+      </div>
+      <nav class="tabs" id="tabs" aria-label="Menu utama">
+        <button class="tab active" data-tab="presensi" type="button">Presensi</button>
+        <button class="tab" data-tab="data" type="button">Data</button>
+        <button class="tab dev-only" data-tab="monitor" type="button" hidden>Monitoring</button>
+        <button class="tab dev-only" data-tab="server" type="button" hidden>Server</button>
+        <button class="tab dev-only" data-tab="info" type="button" hidden>Tulis Info</button>
+        <button class="tab" data-tab="tentang" type="button">Tentang</button>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <p id="notice" class="notice" role="status" hidden></p>
+
+      <!-- ===== PRESENSI ===== -->
+      <section id="tab-presensi" class="tabview">
+        <div class="card">
+          <h2>Input presensi</h2>
+          <p class="muted">Hari ini: <strong id="p-today"></strong>. Tanggal &amp; jam dicatat otomatis oleh server.</p>
+          <div class="seg" role="radiogroup" aria-label="Mode presensi">
+            <label><input type="radio" name="mode" value="single" checked><span>Satu per satu</span></label>
+            <label><input type="radio" name="mode" value="bulk"><span>Sekaligus</span></label>
+          </div>
+
+          <!-- satu per satu -->
+          <form id="singleForm" novalidate>
+            <label>Nama siswa
+              <select id="s-siswa" required></select>
+            </label>
+            <fieldset class="statusset">
+              <legend>Status</legend>
+              <div class="chips" id="s-status"></div>
+            </fieldset>
+            <button id="s-btn" class="btn primary block" type="submit">Kirim presensi</button>
+          </form>
+
+          <!-- sekaligus -->
+          <form id="bulkForm" hidden novalidate>
+            <p class="muted small">Semua siswa diisi <strong>Hadir</strong> dulu — ubah yang berbeda, lalu kirim. Siswa non-Islam tidak bisa dipilih.</p>
+            <div id="b-list" class="blist"></div>
+            <button id="b-btn" class="btn primary block" type="submit">Kirim presensi sekaligus</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== DATA ===== -->
+      <section id="tab-data" class="tabview" hidden>
+        <div class="card">
+          <h2>Data presensi</h2>
+          <div class="row">
+            <label class="grow">Tanggal
+              <input type="date" id="d-tanggal">
+            </label>
+            <button class="btn" id="d-muat" type="button">Muat</button>
+          </div>
+          <div id="d-list" class="dlist"></div>
+          <p id="d-kosong" class="empty-text" hidden>Belum ada presensi di tanggal ini.</p>
+        </div>
+      </section>
+
+      <!-- ===== MONITORING (developer) ===== -->
+      <section id="tab-monitor" class="tabview" hidden>
+        <div class="card">
+          <div class="row between"><h2>Monitoring login</h2><button class="btn small" id="m-muat" type="button">Segarkan</button></div>
+          <p class="muted small">100 aktivitas terakhir. Waktu dalam WIB.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Waktu</th><th>Email</th><th>Peran</th><th>Aksi</th><th>IP</th><th>Perangkat</th></tr></thead>
+              <tbody id="m-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SERVER (developer) ===== -->
+      <section id="tab-server" class="tabview" hidden>
+        <div class="card">
+          <div class="row between"><h2>Info server</h2><button class="btn small" id="v-muat" type="button">Segarkan</button></div>
+          <dl id="v-list" class="kv"></dl>
+        </div>
+      </section>
+
+      <!-- ===== TULIS INFO (developer) ===== -->
+      <section id="tab-info" class="tabview" hidden>
+        <div class="card">
+          <h2>Tulis info (banner)</h2>
+          <p class="muted">Pesan ini tampil sebagai banner di atas <strong>Presensi BE</strong> dan <strong>Presensi Bu Yuni</strong>.</p>
+          <label>Isi info
+            <textarea id="i-text" rows="3" maxlength="300" placeholder="Contoh: Presensi hari Jumat dimulai pukul 11.30"></textarea>
+          </label>
+          <p class="muted small"><span id="i-count">0</span>/300</p>
+          <div class="row">
+            <button class="btn primary" id="i-kirim" type="button">Tampilkan banner</button>
+            <button class="btn" id="i-mati" type="button">Matikan banner</button>
+          </div>
+          <p class="muted small">Banner aktif saat ini: <strong id="i-aktif">—</strong></p>
+        </div>
+      </section>
+
+      <!-- ===== TENTANG ===== -->
+      <section id="tab-tentang" class="tabview" hidden>
+        <div class="aboutbox"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Tentang (dipakai juga dari halaman login) -->
+  <template id="aboutTpl">
+    <div class="card">
+      <h2>Tentang web ini</h2>
+      <p>Web untuk menginput <strong>presensi (absensi) sholat</strong> siswa ke database. Data yang tersimpan ditampilkan di web <strong>Presensi Bu Yuni</strong>.</p>
+      <p class="muted">Guru pembimbing: <strong class="a-guru"></strong></p>
+    </div>
+    <div class="card">
+      <h2>Cara menggunakan</h2>
+      <ol class="steps">
+        <li>Masuk dengan akun <strong>Developer</strong> atau <strong>Author</strong> (tidak ada pendaftaran).</li>
+        <li>Menu <strong>Presensi</strong>: pilih mode <em>Satu per satu</em> (bawaan) atau <em>Sekaligus</em>.</li>
+        <li>Satu per satu: pilih nama, pilih status (Hadir/Sakit/Izin/Alfa), tekan <strong>Kirim presensi</strong>.</li>
+        <li>Sekaligus: ubah status siswa yang tidak hadir, lalu tekan <strong>Kirim presensi sekaligus</strong>.</li>
+        <li>Menu <strong>Data</strong>: pilih tanggal, lalu ubah status atau hapus bila salah input.</li>
+        <li>Developer juga punya menu Monitoring, Server, dan Tulis Info; serta bisa mengubah tanggal &amp; jam.</li>
+        <li>Selesai? Tekan <strong>Keluar</strong>. Setelah 30 menit tidak aktif, kamu keluar otomatis.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>Laporkan masalah</h2>
+      <p>Ada error atau data yang janggal? Hubungi pengembang. Sertakan foto layar dan jam kejadiannya.</p>
+      <div class="links a-report"></div>
+    </div>
+    <div class="card">
+      <h2>Pengembang</h2>
+      <p>Development by <strong class="a-dev"></strong></p>
+      <div class="links a-links"></div>
+    </div>
+  </template>
+
+  <dialog id="editDlg">
+    <form method="dialog" id="editForm">
+      <h2>Ubah presensi</h2>
+      <p class="muted" id="e-nama"></p>
+      <label>Status
+        <select id="e-status">
+          <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Alfa</option>
+        </select>
+      </label>
+      <div class="dev-only" id="e-dev" hidden>
+        <label>Tanggal <input type="date" id="e-tanggal"></label>
+        <label>Jam <input type="time" id="e-jam" step="60"></label>
+        <p class="muted small">Hari mengikuti tanggal secara otomatis.</p>
+      </div>
+      <div class="row end">
+        <button type="button" class="btn" id="e-batal">Batal</button>
+        <button type="submit" class="btn primary" id="e-simpan">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="foot">
+    <p>© <span id="tahun"></span> <span id="foot-dev"></span>. Semua hak dilindungi.</p>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="app.js"></script>
+</body>
 </html>
