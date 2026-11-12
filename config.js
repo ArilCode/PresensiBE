@@ -10,10 +10,10 @@ window.APP_CONFIG = {
   // Halaman "Tentang"
   DEV_NAME: "ACE",
   GURU: "Yuni Puspitasari, S.Pd",
-  EMAIL: "GANTI@email.com",
+  EMAIL: "arilhidayat202@gmail.com",
   LINKS: [
-    { label: "Instagram", url: "https://instagram.com/GANTI" },
-    { label: "GitHub",    url: "https://github.com/GANTI" },
-    { label: "TikTok",    url: "https://tiktok.com/@GANTI" }
+    { label: "Instagram", url: "https://www.instagram.com/arilhidayat_02" },
+    { label: "GitHub",    url: "https://github.com/ArilCode" },
+    { label: "TikTok",    url: "https://www.tiktok.com/@arilhidayat_02" }
   ]
 };
