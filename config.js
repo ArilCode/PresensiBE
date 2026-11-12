@@ -4,8 +4,8 @@
 window.APP_CONFIG = {
   // Dari Supabase: Project Settings > API (atau tombol "Connect")
   // 1) Project URL  2) anon / publishable key  (BUKAN service_role!)
-  SUPABASE_URL: "GANTI-DENGAN-PROJECT-URL",
-  SUPABASE_KEY: "GANTI-DENGAN-ANON-ATAU-PUBLISHABLE-KEY",
+  SUPABASE_URL: "https://jyhvjdjgdfuwuxdatezw.supabase.co",
+  SUPABASE_KEY: "sb_publishable_gtn2hqIhrzIymzUjeKFb-w_pmIvEmNO",
 
   // Halaman "Tentang"
   DEV_NAME: "ACE",
