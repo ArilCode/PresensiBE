@@ -214,7 +214,21 @@
     $("d-tanggal").value = todayWIB();
     startIdle();
     switchTab("presensi");
+    autoSinkronLibur();                                   // jalan di latar belakang, tidak menunggu
     return Promise.all([loadSiswa(), loadBanner(), noteLoad("np", todayWIB())]).then(function () { return refreshToday(); });
+  }
+
+  // ---------- libur nasional otomatis (database menyimpan sendiri dari API hari libur) ----------
+  function autoSinkronLibur() {
+    var y = +todayWIB().slice(0, 4), added = 0;
+    [y, y + 1].reduce(function (p, th) {
+      return p.then(function () {
+        return sb.rpc("sinkron_libur_otomatis", { p_tahun: th }).then(function (r) {
+          var m = !r.error && typeof r.data === "string" ? r.data.match(/selesai:\s*(\d+)/) : null;
+          if (m) added += +m[1];
+        });
+      }).catch(function () { /* diam: jika gagal, dicoba lagi saat login berikutnya */ });
+    }, Promise.resolve()).then(function () { if (added > 0) cekLibur(); });
   }
 
   // ---------- TAB ----------
