@@ -93,6 +93,11 @@
         <div class="card">
           <h2>Input presensi</h2>
           <p class="muted">Hari ini: <strong id="p-today"></strong>. Tanggal &amp; jam dicatat otomatis oleh server.</p>
+          <div id="libur-card" class="libur" hidden role="status">
+            <span class="libur-ico" aria-hidden="true">🚫</span>
+            <div><strong>Presensi ditutup hari ini</strong><p id="libur-text"></p></div>
+          </div>
+          <fieldset id="p-fs" class="plainfs">
           <div class="seg" role="radiogroup" aria-label="Mode presensi">
             <label><input type="radio" name="mode" value="single" checked><span>Satu per satu</span></label>
             <label><input type="radio" name="mode" value="bulk"><span>Sekaligus</span></label>
@@ -119,6 +124,7 @@
             <div id="b-list" class="blist"></div>
             <button id="b-btn" class="btn primary block" type="submit">Kirim presensi sekaligus</button>
           </form>
+          </fieldset>
         </div>
 
         <div class="card" id="note-p">
@@ -145,6 +151,7 @@
             </label>
             <button class="btn" id="d-muat" type="button">Muat</button>
           </div>
+          <p id="d-libur" class="dlibur" hidden></p>
           <div class="bulkbar" id="d-bar">
             <label class="chk"><input type="checkbox" id="d-all"> <span>Pilih semua</span></label>
             <button class="btn small danger" id="d-del-sel" type="button" disabled>Hapus terpilih (0)</button>
@@ -249,6 +256,7 @@
         <li>Menu <strong>Presensi</strong>: pilih mode <em>Satu per satu</em> (bawaan) atau <em>Sekaligus</em>.</li>
         <li>Satu per satu: pilih nama, pilih status (Hadir/Sakit/Izin/Alfa), tekan <strong>Kirim presensi</strong>.</li>
         <li>Sekaligus: ubah status siswa yang tidak hadir, lalu tekan <strong>Kirim presensi sekaligus</strong>.</li>
+        <li>Presensi <strong>otomatis ditutup</strong> pada hari Jumat (pulang cepat), Sabtu (tidak sekolah), Minggu (tanggal merah), libur nasional, dan cuti bersama — alasannya tampil di halaman Presensi.</li>
         <li>Jika status <strong>Izin</strong>, kolom <strong>Keterangan</strong> muncul dan wajib diisi (tampil di web Presensi Bu Yuni).</li>
         <li>Kartu <strong>Catatan hari ini</strong>: tulis alasan jika tidak ada yang sholat atau ada hal khusus hari itu.</li>
         <li>Menu <strong>Data</strong>: pilih tanggal, lalu ubah status, hapus satu data, atau centang beberapa data untuk <strong>Hapus terpilih</strong> / <strong>Hapus semua</strong>.</li>

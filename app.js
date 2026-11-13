@@ -39,6 +39,7 @@
   function friendly(err) {
     var m = (err && err.message) || "";
     if (/duplicate key|unique/i.test(m)) return "Siswa ini sudah punya presensi di tanggal tersebut.";
+    if (/Presensi ditutup/i.test(m)) return m;
     if (/Keterangan izin wajib/i.test(m)) return "Status Izin wajib diisi keterangannya.";
     if (/catatan tanggal lain/i.test(m)) return "Hanya developer yang boleh mengubah catatan tanggal lain.";
     if (/non-Islam/i.test(m)) return "Siswa non-Islam tidak ikut presensi sholat.";
@@ -81,7 +82,7 @@
     auth: { persistSession: true, storage: window.sessionStorage, autoRefreshToken: true, detectSessionInUrl: false }
   });
 
-  var state = { role: null, siswa: [], todayMap: {}, mode: "single", editing: null };
+  var state = { libur: null, role: null, siswa: [], todayMap: {}, mode: "single", editing: null };
 
   // ---------- banner info ----------
   function loadBanner() {
@@ -237,8 +238,17 @@
       state.siswa = r.data || [];
     });
   }
+  // hari libur: Jumat/Sabtu/Minggu, libur nasional, cuti bersama -> form presensi dikunci
+  function cekLibur() {
+    return sb.rpc("alasan_libur", { p_tanggal: todayWIB() }).then(function (r) {
+      state.libur = (!r.error && typeof r.data === "string" && r.data) ? r.data : null;
+      $("libur-card").hidden = !state.libur;
+      $("libur-text").textContent = state.libur || "";
+      $("p-fs").disabled = !!state.libur;
+    }).catch(function () { state.libur = null; });
+  }
   function refreshToday() {
-    return sb.from("presensi").select("siswa_id,status").eq("tanggal", todayWIB()).then(function (r) {
+    return cekLibur().then(function () { return sb.from("presensi").select("siswa_id,status").eq("tanggal", todayWIB()); }).then(function (r) {
       state.todayMap = {};
       (r.data || []).forEach(function (x) { state.todayMap[x.siswa_id] = x.status; });
       renderSingle(); renderBulk();
@@ -297,6 +307,7 @@
   });
   $("singleForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
+    if (state.libur) { notice("Presensi ditutup: " + state.libur, "err"); return; }
     var id = $("s-siswa").value, st = (document.querySelector("input[name=s-st]:checked") || {}).value;
     if (!id) { notice("Pilih nama siswa dulu.", "err"); return; }
     if (STATUS.indexOf(st) === -1) { notice("Pilih status presensi.", "err"); return; }
@@ -344,6 +355,7 @@
   }
   $("bulkForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
+    if (state.libur) { notice("Presensi ditutup: " + state.libur, "err"); return; }
     var rows = [], missing = [];
     state.siswa.forEach(function (s) {
       if (s.nonis || state.todayMap[s.id]) return;
@@ -393,6 +405,10 @@
     var list = $("d-list"); list.innerHTML = ""; dsel = {}; drows = [];
     dBar();
     noteLoad("nd", tgl);
+    sb.rpc("alasan_libur", { p_tanggal: tgl }).then(function (r) {
+      var t = !r.error && typeof r.data === "string" ? r.data : "";
+      $("d-libur").textContent = t ? "📅 " + t : ""; $("d-libur").hidden = !t;
+    });
     sb.from("presensi").select("id,tanggal,jam,status,keterangan,siswa:siswa_id(nama,kelas)").eq("tanggal", tgl).then(function (r) {
       if (r.error) { notice(friendly(r.error), "err"); return; }
       var rows = (r.data || []).slice().sort(function (a, b) { return (a.siswa.nama).toLowerCase() < (b.siswa.nama).toLowerCase() ? -1 : 1; });
