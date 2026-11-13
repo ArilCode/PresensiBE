@@ -46,7 +46,8 @@
     if (/Hanya developer/i.test(m)) return "Hanya developer yang boleh mengubah tanggal/jam.";
     if (/row-level security|permission denied|Tidak punya akses|Khusus developer/i.test(m)) return "Kamu tidak punya izin untuk aksi ini.";
     if (/Failed to fetch|NetworkError/i.test(m)) return "Tidak bisa terhubung. Periksa internetmu.";
-    return "Terjadi kesalahan. Coba lagi.";
+    if (/Could not find the function|schema cache|PGRST202|does not exist/i.test(m)) return "Fungsi database belum terpasang. Jalankan file SQL terbaru di Supabase (lihat panduan), lalu coba lagi.";
+    return "Terjadi kesalahan" + (m ? ": " + String(m).slice(0, 160) : ". Coba lagi.");
   }
 
   // ---------- halaman umum ----------
