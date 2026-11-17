@@ -99,7 +99,8 @@ label{display:flex;flex-direction:column;font-size:.88rem;font-weight:600;gap:.2
 
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;background:var(--bg);padding:.3rem;border-radius:12px;margin:.8rem 0 1rem}
 .seg label{margin:0}
-.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;min-height:0;padding:0;margin:0;left:0;top:0}
 .seg span{display:block;text-align:center;padding:.6rem;border-radius:9px;cursor:pointer;font-weight:700}
 .seg input:checked+span{background:var(--primary);color:#fff}
 .seg input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--primary) 45%,transparent)}
@@ -108,7 +109,8 @@ label{display:flex;flex-direction:column;font-size:.88rem;font-weight:600;gap:.2
 .statusset legend{font-size:.88rem;font-weight:600;margin-bottom:.35rem;padding:0}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
 .chips label{margin:0}
-.chips input{position:absolute;opacity:0;pointer-events:none}
+.chips label{position:relative}
+.chips input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;min-height:0;padding:0;margin:0;left:0;top:0}
 .chips span{display:block;text-align:center;padding:.65rem .2rem;border:2px solid var(--line);border-radius:10px;cursor:pointer;font-weight:700;font-size:.9rem;min-height:44px}
 .chips input:checked+span{color:#fff;border-color:transparent}
 .chips input[value=Hadir]:checked+span{background:var(--hadir)}
@@ -206,3 +208,80 @@ th.cb,td.cb{width:34px;text-align:center}
 fieldset.plainfs{border:0;padding:0;margin:0;min-width:0}
 fieldset.plainfs[disabled]{opacity:.4;pointer-events:none;filter:grayscale(.6)}
 .dlibur{margin:.2rem 0 .6rem;padding:.5rem .7rem;border-radius:10px;font-size:.9rem;font-weight:600;background:color-mix(in srgb,var(--danger) 9%,var(--card));border:1px solid color-mix(in srgb,var(--danger) 40%,var(--line))}
+
+
+/* =====================================================================
+   RESPONSIF — HP kecil → HP → tablet → laptop → layar lebar
+   ===================================================================== */
+:root{--wrap:960px}
+.top-inner,.tabs,.wrap{max-width:var(--wrap)}
+img{max-width:100%;height:auto}
+.brand{min-width:0}
+.brand h1,.brand p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* HP sangat kecil (<= 360px) */
+@media (max-width:360px){
+  .wrap{padding:.7rem}
+  .card{padding:.8rem}
+  .brand h1{font-size:.95rem}
+  .logo{width:34px;height:34px}
+  .tab{padding:.4rem .8rem;font-size:.85rem}
+  .chips{gap:.3rem}
+  .chips span{font-size:.78rem;padding:.6rem .1rem}
+  .btn{padding:.6rem .9rem}
+  .row{gap:.5rem}
+  .bulkbar .btn{flex:1 1 100%}
+  .login-card{padding:1.1rem}
+  .kv{grid-template-columns:1fr}
+  .kv dt{border-bottom:0;padding-bottom:0}
+}
+
+/* HP landscape / layar pendek: header tidak menempel agar area kerja lebih luas */
+@media (max-height:520px) and (orientation:landscape){
+  .top{position:static}
+  .login-wrap{padding-top:1rem}
+}
+
+/* Tablet (>= 700px) */
+@media (min-width:700px){
+  .wrap{padding:1.2rem}
+  .blist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.7rem}
+  .bitem{margin:0}
+  .dlist,.ilist{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.7rem}
+  .ditem,.iitem{margin:0}
+  .kv{grid-template-columns:minmax(180px,.7fr) 2fr}
+  .chips span{padding:.7rem .2rem}
+  .login-card{max-width:440px}
+}
+
+/* Laptop (>= 900px): menu jadi navbar satu baris di atas */
+@media (min-width:900px){
+  .top{display:flex;align-items:center;gap:1rem;padding:calc(.55rem + env(safe-area-inset-top)) max(1.2rem,calc((100% - var(--wrap)) / 2)) .55rem}
+  .top-inner{display:contents}
+  .logo{order:0}
+  .brand{order:1;flex:none;max-width:220px}
+  .tabs{order:2;flex:1;max-width:none;margin:0 0 0 1rem;padding:0;overflow:visible;flex-wrap:wrap;gap:.25rem}
+  .tab{background:transparent;border-radius:8px;padding:.5rem .9rem}
+  .tab:hover{background:rgba(255,255,255,.18)}
+  .tab.active{background:#fff}
+  #logoutBtn{order:3;margin-left:auto}
+}
+
+/* Layar lebar (>= 1100px): konten lebih lebar, kartu berdampingan */
+@media (min-width:1100px){
+  :root{--wrap:1200px}
+  .wrap{padding:1.5rem}
+  #tab-presensi,#tab-data,#tab-info{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:1rem;align-items:start}
+  #tab-presensi>.card,#tab-data>.card,#tab-info>.card{margin-bottom:0}
+  #note-p,#note-d{position:sticky;top:4.5rem}
+  #tab-info{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
+  .blist{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  #tab-tentang .aboutbox{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start}
+  #tab-tentang .aboutbox .card{margin-bottom:0}
+}
+
+/* Layar sangat lebar (>= 1500px) */
+@media (min-width:1500px){
+  html{font-size:106%}
+  :root{--wrap:1320px}
+}
