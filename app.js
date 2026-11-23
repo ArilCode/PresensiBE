@@ -255,11 +255,18 @@
   }
   // hari libur: Jumat/Sabtu/Minggu, libur nasional, cuti bersama -> form presensi dikunci
   function cekLibur() {
-    return sb.rpc("alasan_libur", { p_tanggal: todayWIB() }).then(function (r) {
-      state.libur = (!r.error && typeof r.data === "string" && r.data) ? r.data : null;
+    var today = todayWIB();
+    return Promise.all([
+      sb.rpc("alasan_libur", { p_tanggal: today }),
+      sb.from("catatan_hari").select("catatan").eq("tanggal", today).maybeSingle()
+    ]).then(function (x) {
+      var libur = (!x[0].error && typeof x[0].data === "string" && x[0].data) ? x[0].data : null;
+      var cat = (!x[1].error && x[1].data && x[1].data.catatan) ? x[1].data.catatan : null;
+      // alasan penutupan: hari libur lebih dulu, jika tidak ada pakai catatan hari ini
+      state.libur = libur || (cat ? "Catatan hari ini — " + cat : null);
       $("libur-card").hidden = !state.libur;
       $("libur-text").textContent = state.libur || "";
-      $("p-fs").disabled = !!state.libur;
+      $("p-fs").disabled = !!state.libur;                 // nama & status terkunci, tidak bisa diklik
     }).catch(function () { state.libur = null; });
   }
   function refreshToday() {
@@ -509,17 +516,17 @@
     return sb.rpc("simpan_catatan", { p_tanggal: date, p_catatan: text }).then(function (r) {
       if (r.error) notice(friendly(r.error), "err"); else notice(msg, "ok");
       return noteLoad(pre, date);
-    });
+    }).then(function () { if (date === todayWIB()) return cekLibur(); });   // kunci/buka presensi hari ini
   }
   $("np-text").addEventListener("input", function () { $("np-count").textContent = $("np-text").value.length; });
   $("np-save").addEventListener("click", function () {
     var t = $("np-text").value.trim();
     if (!t) { notice("Tulis catatan dulu, atau pakai tombol Hapus catatan.", "err"); return; }
-    noteSave("np", todayWIB(), t, "Catatan hari ini disimpan ✓");
+    noteSave("np", todayWIB(), t, "Catatan disimpan ✓ — presensi hari ini otomatis ditutup.");
   });
   $("np-del").addEventListener("click", function () {
     if (!window.confirm("Hapus catatan hari ini?")) return;
-    noteSave("np", todayWIB(), "", "Catatan hari ini dihapus.");
+    noteSave("np", todayWIB(), "", "Catatan dihapus — presensi hari ini dibuka kembali.");
   });
   $("nd-save").addEventListener("click", function () {
     var t = $("nd-text").value.trim();
